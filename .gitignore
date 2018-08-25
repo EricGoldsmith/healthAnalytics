@@ -1,0 +1,14 @@
+.Rproj.user
+*.Rproj
+.Rhistory
+.RData
+.Rapp.history
+.Rprofile
+.httr-oauth
+.my.cnf
+*.xml
+*.zip
+**/figs/
+**/output/
+**/rsconnect/**
+.DS_Store
