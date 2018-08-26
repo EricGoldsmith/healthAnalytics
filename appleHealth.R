@@ -15,13 +15,15 @@ library(scales)
 # healthData <- XML:::xmlAttrsToDataFrame(xml["//Record"])
 
 
-healthData <- ah_import_xml("data/apple_health_export/export.xml")
+healthData <- ah_import_xml("data/apple_health_export/export.xml") %>%
+  mutate(endDate = with_tz(endDate, tzone = "US/Eastern"))
+
+maxDate <- max(healthData$endDate) %>% date()
 
 #ah_shiny(healthData)
 
 dailySteps <- healthData %>%
   filter(type == "StepCount") %>%
-  mutate(endDate = with_tz(endDate, tzone = "US/Eastern")) %>%
   transmute(date = date(endDate), sourceName, steps = value) %>%
   group_by(date, sourceName) %>%
   summarize(steps = sum(steps)) %>%
@@ -33,18 +35,17 @@ ggplot(dailySteps %>% filter(date >= now() - months(2)), aes(x = date, y = steps
   scale_y_continuous(labels = comma) +
   labs(title = "Daily steps")
 
-ggsave(sprintf("figs/dailySteps_%s.png", Sys.Date()), width = 12, height = 8, dpi = 96)
+ggsave(sprintf("figs/dailySteps_%s.png", maxDate), width = 12, height = 8, dpi = 96)
 
 
 bloodPressure <- healthData %>% 
   filter(sourceName %in% c("Health", "OmronWellness"), 
          type %in% c("BloodPressureSystolic", "BloodPressureDiastolic", "HeartRate")) %>%
-  mutate(datetime = with_tz(endDate, tzone = "US/Eastern")) %>%
-  select(datetime, type, value) %>%
+  select(datetime = endDate, type, value) %>%
   tidyr::spread(key = type, value = value) %>%
   select(datetime, systolic = BloodPressureSystolic, diastolic = BloodPressureDiastolic, pulse = HeartRate)
 
-write.csv(bloodPressure, sprintf("output/bloodPressure_%s.csv", Sys.Date()), row.names = FALSE)
+write.csv(bloodPressure, sprintf("output/bloodPressure_%s.csv", maxDate), row.names = FALSE)
 
 colorSystolic <- rgb(0.7, 0.2, 0.1)
 colorDiastolic <- rgb(0.2, 0.7, 0.1)
@@ -74,5 +75,5 @@ ggplot(bloodPressure %>% filter(datetime >= now() - months(2)), aes(x = datetime
   theme_light() +
   theme(panel.border = element_blank())
 
-ggsave(sprintf("figs/bloodPressure_%s.png", Sys.Date()), width = 12, height = 8, dpi = 96)
+ggsave(sprintf("figs/bloodPressure_%s.png", maxDate), width = 12, height = 8, dpi = 96)
   
