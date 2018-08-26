@@ -45,26 +45,33 @@ bloodPressure <- healthData %>%
   select(datetime, systolic = BloodPressureSystolic, diastolic = BloodPressureDiastolic, pulse = HeartRate)
 
 write.csv(bloodPressure, sprintf("output/bloodPressure_%s.csv", Sys.Date()), row.names = FALSE)
-  
+
+colorSystolic <- rgb(0.7, 0.2, 0.1)
+colorDiastolic <- rgb(0.2, 0.7, 0.1)
+colorPulse <- "blue"
+
 # Lollipop/dumbbell chart
 ggplot(bloodPressure %>% filter(datetime >= now() - months(2)), aes(x = datetime)) +
   geom_segment(aes(xend = datetime, y = diastolic, yend = systolic), color="grey") +
-  geom_point(aes(y = systolic), color = rgb(0.7,0.2,0.1), size = 3, alpha = 0.5) +
-  geom_point(aes(y = diastolic), color = rgb(0.2,0.7,0.1), size = 3, alpha = 0.5) +
-  geom_point(aes(y = pulse), color = "blue", size = 3, alpha = 0.5) +
+  geom_point(aes(y = systolic), color = colorSystolic, size = 3, alpha = 0.5) +
+  geom_point(aes(y = diastolic), color = colorDiastolic, size = 3, alpha = 0.5) +
+  geom_point(aes(y = pulse), color = colorPulse, size = 3, alpha = 0.5) +
+  geom_smooth(aes(y = systolic), color = colorSystolic, size = 0.6, alpha = 0.2) +
+  geom_smooth(aes(y = diastolic), color = colorDiastolic, size = 0.6, alpha = 0.2) +
+  geom_smooth(aes(y = pulse), color = colorPulse, size = 0.6, alpha = 0.2) +
   geom_text(data = bloodPressure %>% filter(!is.na(systolic)) %>% filter(datetime == min(datetime)),
             aes(x = datetime, y = systolic, label = "systolic"),
-            color = rgb(0.7,0.2,0.1), size = 3, vjust = -1) +
+            color = colorSystolic, size = 4, vjust = -1) +
   geom_text(data = bloodPressure %>% filter(!is.na(diastolic)) %>% filter(datetime == min(datetime)), 
             aes(x = datetime, y = diastolic, label = "diastolic"), 
-            color = rgb(0.2,0.7,0.1), size = 3, vjust = -1) +
+            color = colorDiastolic, size = 4, vjust = -1) +
   geom_text(data = bloodPressure %>% filter(!is.na(pulse)) %>% filter(datetime == min(datetime)),
             aes(x = datetime, y = pulse, label = "pulse"),
-            color = "blue", size = 3, vjust = -1) +
+            color = colorPulse, size = 4, vjust = -1) +
   scale_x_datetime(breaks = pretty_breaks(n = 10)) +
   scale_y_continuous(breaks = pretty_breaks(n = 10)) +
-  theme_light() +
   labs(title = "Blood pressure and pulse", x = "", y = "") +
+  theme_light() +
   theme(panel.border = element_blank())
 
 ggsave(sprintf("figs/bloodPressure_%s.png", Sys.Date()), width = 12, height = 8, dpi = 96)
