@@ -29,7 +29,7 @@ dailySteps <- healthData %>%
   summarize(steps = sum(steps)) %>%
   ungroup()
 
-ggplot(dailySteps %>% filter(date >= now() - months(2)), aes(x = date, y = steps, fill = sourceName)) +
+ggplot(dailySteps %>% filter(date >= maxDate - months(2)), aes(x = date, y = steps, fill = sourceName)) +
   geom_col(position = position_dodge(preserve = "single")) +
   scale_x_date(breaks = pretty_breaks(n = 10)) +
   scale_y_continuous(labels = comma) +
@@ -52,7 +52,7 @@ colorDiastolic <- rgb(0.2, 0.7, 0.1)
 colorPulse <- "blue"
 
 # Lollipop/dumbbell chart
-ggplot(bloodPressure %>% filter(datetime >= now() - months(2)), aes(x = datetime)) +
+ggplot(bloodPressure %>% filter(datetime >= maxDate - months(2)), aes(x = datetime)) +
   geom_segment(aes(xend = datetime, y = diastolic, yend = systolic), color="grey") +
   geom_point(aes(y = systolic), color = colorSystolic, size = 3, alpha = 0.5) +
   geom_point(aes(y = diastolic), color = colorDiastolic, size = 3, alpha = 0.5) +
