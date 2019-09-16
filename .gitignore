@@ -7,6 +7,7 @@
 .httr-oauth
 .my.cnf
 *.xml
+*.json
 *.zip
 **/figs/
 **/output/
