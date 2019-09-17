@@ -73,6 +73,7 @@ dailyStepsGraph <- dailySteps %>%
 
 ggplot(dailyStepsGraph, aes(x = date, y = steps, group = sourceName, color = sourceName)) +
   geom_line() +
+  geom_smooth() +
   scale_x_date(breaks = pretty_breaks(n = 10), date_labels = "%b %e, '%y ") +
   scale_y_continuous(labels = comma) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
@@ -93,6 +94,7 @@ dailyDistanceGraph <- dailyDistance %>%
 
 ggplot(dailyDistanceGraph, aes(x = date, y = distance, group = sourceName, color = sourceName)) +
   geom_line() +
+  geom_smooth() +
   scale_x_date(breaks = pretty_breaks(n = 10), date_labels = "%b %e, '%y ") +
   scale_y_continuous(labels = comma) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
@@ -111,7 +113,7 @@ yearlyDistanceSummary <- dailyDistance %>%
 ggplot(yearlyDistanceSummary, aes(x = year, y = distance)) +
   geom_col(fill = "darkgrey") +
   geom_text(aes(label = round(distance), vjust = "inward")) +
-  scale_y_continuous(, expand = expand_scale(mult = c(0, .01))) +
+  scale_y_continuous(expand = expand_scale(mult = c(0, .01))) +
   labs(title = "Yearly distance",
        y = "miles")
 
@@ -142,11 +144,9 @@ ggplot(bloodPressureGraph, aes(x = datetime)) +
   geom_point(aes(y = systolic), color = colorSystolic, size = 3, alpha = 0.5) +
   geom_point(aes(y = diastolic), color = colorDiastolic, size = 3, alpha = 0.5) +
   geom_point(aes(y = pulse), color = colorPulse, size = 3, alpha = 0.5) +
-  # For some reason, Loess smoothing is no longer working as expected.
-  # Switch to simpler linear model until I have time to investigate.
-  geom_smooth(aes(y = systolic), method = "lm", color = colorSystolic, size = 0.6, alpha = 0.2) +
-  geom_smooth(aes(y = diastolic), method = "lm", color = colorDiastolic, size = 0.6, alpha = 0.2) +
-  geom_smooth(aes(y = pulse), method = "lm", color = colorPulse, size = 0.6, alpha = 0.2) +
+  geom_smooth(aes(y = systolic), color = colorSystolic, size = 0.6, alpha = 0.2) +
+  geom_smooth(aes(y = diastolic), color = colorDiastolic, size = 0.6, alpha = 0.2) +
+  geom_smooth(aes(y = pulse), color = colorPulse, size = 0.6, alpha = 0.2) +
   geom_text(data = bloodPressureGraph %>% filter(!is.na(systolic)) %>% filter(datetime == min(datetime)),
             aes(x = datetime, y = systolic, label = "systolic"),
             color = colorSystolic, size = 4, vjust = -1) +
