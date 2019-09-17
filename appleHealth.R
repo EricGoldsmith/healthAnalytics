@@ -109,7 +109,9 @@ yearlyDistanceSummary <- dailyDistance %>%
   summarize(distance = sum(distance))
 
 ggplot(yearlyDistanceSummary, aes(x = year, y = distance)) +
-  geom_col() +
+  geom_col(fill = "darkgrey") +
+  geom_text(aes(label = round(distance), vjust = "inward")) +
+  scale_y_continuous(, expand = expand_scale(mult = c(0, .01))) +
   labs(title = "Yearly distance",
        y = "miles")
 
@@ -164,11 +166,11 @@ ggplot(bloodPressureGraph, aes(x = datetime)) +
 ggsave(sprintf("figs/bloodPressure_%s.png", maxHealthDate), width = 12, height = 8, dpi = 96)
 
 
-maxWorkoutDate <- max(workoutData$endDate) %>% date()
-
 workoutData <- getWorkoutData(xmlData) %>%
   mutate(startDate = with_tz(startDate, tzone = "US/Eastern"),
          endDate = with_tz(endDate, tzone = "US/Eastern"))
+
+maxWorkoutDate <- max(workoutData$endDate) %>% date()
 
 monthlyWorkoutSummary <- workoutData %>%
   mutate(month = floor_date(endDate, unit = "month")) %>%
@@ -178,8 +180,9 @@ monthlyWorkoutSummary <- workoutData %>%
 
 ggplot(monthlyWorkoutSummary, aes(x = month, y = distance, fill = activityType)) +
   geom_col() +
+  geom_text(aes(label = round(distance)), position = position_stack(vjust = .5), size = 3) +
   scale_x_datetime(breaks = pretty_breaks(n = 10), date_labels = "%b %e, '%y ") +
-  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10), expand = expand_scale(mult = c(0, .01))) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(title = "Monthly workout distance",
        y = "miles")
