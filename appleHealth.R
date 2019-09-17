@@ -1,26 +1,69 @@
+library(xml2)
+library(purrr)
 library(dplyr)
 library(lubridate)
-#library(devtools)
-#install_github("EricGoldsmith/AppleHealthAnalysis")
-library(AppleHealthAnalysis)
 library(ggplot2)
 library(scales)
 
-# library(XML)
-# 
-# #load apple health export.xml file
-# xml <- xmlParse("data/apple_health_export/export.xml")
-# 
-# #transform xml file to data frame - select the Record rows from the xml file
-# healthData <- XML:::xmlAttrsToDataFrame(xml["//Record"])
+
+getHealthData <- function(xmlData) {
+  
+  results <- xml_find_all(xmlData, "//Record") %>%
+    map(xml_attrs) %>%
+    map_df(as.list) %>%
+    select(-device, -creationDate) %>%
+    filter(!grepl("HKCategoryTypeIdentifier.*", .$type)) %>%
+    mutate(
+      type = gsub("HKQuantityTypeIdentifier", "", .$type),
+      # Clean up source names (some seem to contain special characters)
+      sourceName = gsub("[^A-Za-z0-9 ]", "", .$sourceName, perl = TRUE),
+      startDate = ymd_hms(startDate),
+      endDate = ymd_hms(endDate),
+      value = as.numeric(value)
+    )
+  
+  return(results)
+}
 
 
-healthData <- ah_import_xml("data/apple_health_export/export.xml") %>%
-  mutate(endDate = with_tz(endDate, tzone = "US/Eastern"))
+getWorkoutData <- function(xmlData) {
+  
+  results <- xml_find_all(xmlData, "//Workout") %>%
+    map(xml_attrs) %>%
+    map_df(as.list) %>%
+    select(-device, -creationDate) %>%
+    rename(activityType = workoutActivityType) %>%
+    mutate(
+      activityType = gsub("HKWorkoutActivityType", "", .$activityType),
+      # Clean up source names (some seem to contain special characters)
+      sourceName = gsub("[^A-Za-z0-9 ]", "", .$sourceName, perl = TRUE),
+      duration = as.numeric(duration),
+      totalDistance = as.numeric(totalDistance),
+      totalEnergyBurned = as.numeric(totalEnergyBurned),
+      startDate = ymd_hms(startDate),
+      endDate = ymd_hms(endDate)
+    )
+  
+  return(results)
+}
+
+
+#
+# Main
+#
+
+filename <- "data/apple_health_export/export.xml"
+xmlData <- read_xml(filename)
+
+healthData <- getHealthData(xmlData) %>%
+  mutate(startDate = with_tz(startDate, tzone = "US/Eastern"),
+         endDate = with_tz(endDate, tzone = "US/Eastern"))
+
+workoutData <- getWorkoutData(xmlData) %>%
+  mutate(startDate = with_tz(startDate, tzone = "US/Eastern"),
+         endDate = with_tz(endDate, tzone = "US/Eastern"))
 
 maxDate <- max(healthData$endDate) %>% date()
-
-#ah_shiny(healthData)
 
 dailySteps <- healthData %>%
   filter(type == "StepCount") %>%
@@ -59,7 +102,7 @@ ggplot(dailyDistanceGraph, aes(x = date, y = distance, group = sourceName, color
        y = "miles")
 
 yearlyDistanceSummary <- dailyDistance %>%
-  filter(sourceName == "Erics AppleWatch") %>%
+  filter(grepl("AppleWatch", .$sourceName)) %>%
   mutate(year = year(date)) %>%
   group_by(year) %>%
   summarize(distance = sum(distance))
@@ -74,6 +117,8 @@ bloodPressure <- healthData %>%
   filter(sourceName %in% c("Health", "OmronWellness", "OMRON connect"), 
          type %in% c("BloodPressureSystolic", "BloodPressureDiastolic", "HeartRate")) %>%
   select(datetime = endDate, type, value) %>%
+  # It seems that for some reason, blood pressure data seems duplicated
+  distinct() %>%
   tidyr::spread(key = type, value = value) %>%
   select(datetime, systolic = BloodPressureSystolic, diastolic = BloodPressureDiastolic, pulse = HeartRate)
 
