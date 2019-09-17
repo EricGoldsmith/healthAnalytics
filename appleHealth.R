@@ -4,6 +4,7 @@ library(dplyr)
 library(lubridate)
 library(ggplot2)
 library(scales)
+library(stringr)
 
 
 getHealthData <- function(xmlData) {
@@ -12,11 +13,11 @@ getHealthData <- function(xmlData) {
     map(xml_attrs) %>%
     map_df(as.list) %>%
     select(-device, -creationDate) %>%
-    filter(!grepl("HKCategoryTypeIdentifier.*", .$type)) %>%
+    filter(!str_detect(type, "HKCategoryTypeIdentifier.*")) %>%
     mutate(
-      type = gsub("HKQuantityTypeIdentifier", "", .$type),
+      type = str_replace_all(type, "HKQuantityTypeIdentifier", ""),
       # Clean up source names (some seem to contain special characters)
-      sourceName = gsub("[^A-Za-z0-9 ]", "", .$sourceName, perl = TRUE),
+      sourceName = str_replace_all(sourceName, "[^A-Za-z0-9'’ ]", " "),
       startDate = ymd_hms(startDate),
       endDate = ymd_hms(endDate),
       value = as.numeric(value)
@@ -34,9 +35,9 @@ getWorkoutData <- function(xmlData) {
     select(-device, -creationDate) %>%
     rename(activityType = workoutActivityType) %>%
     mutate(
-      activityType = gsub("HKWorkoutActivityType", "", .$activityType),
+      activityType = str_replace_all(activityType, "HKWorkoutActivityType", ""),
       # Clean up source names (some seem to contain special characters)
-      sourceName = gsub("[^A-Za-z0-9 ]", "", .$sourceName, perl = TRUE),
+      sourceName = str_replace_all(sourceName, "[^A-Za-z0-9'’ ]", " "),
       duration = as.numeric(duration),
       totalDistance = as.numeric(totalDistance),
       totalEnergyBurned = as.numeric(totalEnergyBurned),
@@ -105,7 +106,7 @@ ggsave(sprintf("figs/dailyDistance_%s.png", maxHealthDate), width = 12, height =
 
 
 yearlyDistanceSummary <- dailyDistance %>%
-  filter(grepl("AppleWatch", .$sourceName)) %>%
+  filter(str_detect(sourceName, "Apple Watch")) %>%
   mutate(year = year(date)) %>%
   group_by(year) %>%
   summarize(distance = sum(distance))
