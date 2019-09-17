@@ -7,6 +7,12 @@ library(scales)
 library(stringr)
 
 
+cleanSourceName <- function(sourceName) {
+  # Clean up source names (some seem to contain special characters)
+  return(str_replace_all(sourceName, "[^A-Za-z0-9'’ ]", " "))
+}
+
+
 getHealthData <- function(xmlData) {
   
   results <- xml_find_all(xmlData, "//Record") %>%
@@ -16,8 +22,7 @@ getHealthData <- function(xmlData) {
     filter(!str_detect(type, "HKCategoryTypeIdentifier.*")) %>%
     mutate(
       type = str_replace_all(type, "HKQuantityTypeIdentifier", ""),
-      # Clean up source names (some seem to contain special characters)
-      sourceName = str_replace_all(sourceName, "[^A-Za-z0-9'’ ]", " "),
+      sourceName = cleanSourceName(sourceName),
       startDate = ymd_hms(startDate),
       endDate = ymd_hms(endDate),
       value = as.numeric(value)
@@ -36,8 +41,7 @@ getWorkoutData <- function(xmlData) {
     rename(activityType = workoutActivityType) %>%
     mutate(
       activityType = str_replace_all(activityType, "HKWorkoutActivityType", ""),
-      # Clean up source names (some seem to contain special characters)
-      sourceName = str_replace_all(sourceName, "[^A-Za-z0-9'’ ]", " "),
+      sourceName = cleanSourceName(sourceName),
       duration = as.numeric(duration),
       totalDistance = as.numeric(totalDistance),
       totalEnergyBurned = as.numeric(totalEnergyBurned),
@@ -106,16 +110,17 @@ ggsave(sprintf("figs/dailyDistance_%s.png", maxHealthDate), width = 12, height =
 
 
 yearlyDistanceSummary <- dailyDistance %>%
-  filter(str_detect(sourceName, "Apple Watch")) %>%
   mutate(year = year(date)) %>%
-  group_by(year) %>%
-  summarize(distance = sum(distance))
+  group_by(year, sourceName) %>%
+  summarize(distance = sum(distance)) %>%
+  ungroup()
 
-ggplot(yearlyDistanceSummary, aes(x = year, y = distance)) +
-  geom_col(fill = "darkgrey") +
-  geom_text(aes(label = round(distance), vjust = "inward")) +
+ggplot(yearlyDistanceSummary, aes(x = as.factor(year), y = distance, fill = sourceName, group = sourceName)) +
+  geom_col(position = position_dodge2(preserve = "single")) +
+  geom_text(aes(label = round(distance), vjust = "inward"), position = position_dodge2(width = 0.9)) +
   scale_y_continuous(expand = expand_scale(mult = c(0, .01))) +
   labs(title = "Yearly distance",
+       x = "year",
        y = "miles")
 
 ggsave(sprintf("figs/yearlyDistance_%s.png", maxHealthDate), width = 12, height = 8, dpi = 96)
