@@ -59,11 +59,7 @@ healthData <- getHealthData(xmlData) %>%
   mutate(startDate = with_tz(startDate, tzone = "US/Eastern"),
          endDate = with_tz(endDate, tzone = "US/Eastern"))
 
-workoutData <- getWorkoutData(xmlData) %>%
-  mutate(startDate = with_tz(startDate, tzone = "US/Eastern"),
-         endDate = with_tz(endDate, tzone = "US/Eastern"))
-
-maxDate <- max(healthData$endDate) %>% date()
+maxHealthDate <- max(healthData$endDate) %>% date()
 
 dailySteps <- healthData %>%
   filter(type == "StepCount") %>%
@@ -73,7 +69,8 @@ dailySteps <- healthData %>%
   ungroup()
 
 dailyStepsGraph <- dailySteps %>% 
-  filter(date >= maxDate - months(2))
+  filter(date >= maxHealthDate - months(2))
+
 ggplot(dailyStepsGraph, aes(x = date, y = steps, group = sourceName, color = sourceName)) +
   geom_line() +
   scale_x_date(breaks = pretty_breaks(n = 10), date_labels = "%b %e, '%y ") +
@@ -81,7 +78,7 @@ ggplot(dailyStepsGraph, aes(x = date, y = steps, group = sourceName, color = sou
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(title = "Daily steps")
 
-ggsave(sprintf("figs/dailySteps_%s.png", maxDate), width = 12, height = 8, dpi = 96)
+ggsave(sprintf("figs/dailySteps_%s.png", maxHealthDate), width = 12, height = 8, dpi = 96)
 
 
 dailyDistance <- healthData %>%
@@ -92,7 +89,8 @@ dailyDistance <- healthData %>%
   ungroup()
 
 dailyDistanceGraph <- dailyDistance %>% 
-  filter(date >= maxDate - months(2))
+  filter(date >= maxHealthDate - months(2))
+
 ggplot(dailyDistanceGraph, aes(x = date, y = distance, group = sourceName, color = sourceName)) +
   geom_line() +
   scale_x_date(breaks = pretty_breaks(n = 10), date_labels = "%b %e, '%y ") +
@@ -100,6 +98,9 @@ ggplot(dailyDistanceGraph, aes(x = date, y = distance, group = sourceName, color
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(title = "Daily distance",
        y = "miles")
+
+ggsave(sprintf("figs/dailyDistance_%s.png", maxHealthDate), width = 12, height = 8, dpi = 96)
+
 
 yearlyDistanceSummary <- dailyDistance %>%
   filter(grepl("AppleWatch", .$sourceName)) %>%
@@ -112,6 +113,8 @@ ggplot(yearlyDistanceSummary, aes(x = year, y = distance)) +
   labs(title = "Yearly distance",
        y = "miles")
 
+ggsave(sprintf("figs/yearlyDistance_%s.png", maxHealthDate), width = 12, height = 8, dpi = 96)
+
 
 bloodPressure <- healthData %>% 
   filter(sourceName %in% c("Health", "OmronWellness", "OMRON connect"), 
@@ -122,7 +125,7 @@ bloodPressure <- healthData %>%
   tidyr::spread(key = type, value = value) %>%
   select(datetime, systolic = BloodPressureSystolic, diastolic = BloodPressureDiastolic, pulse = HeartRate)
 
-write.csv(bloodPressure, sprintf("output/bloodPressure_%s.csv", maxDate), row.names = FALSE)
+write.csv(bloodPressure, sprintf("output/bloodPressure_%s.csv", maxHealthDate), row.names = FALSE)
 
 colorSystolic <- rgb(0.7, 0.2, 0.1)
 colorDiastolic <- rgb(0.2, 0.7, 0.1)
@@ -130,7 +133,8 @@ colorPulse <- "blue"
 
 # Lollipop/dumbbell chart
 bloodPressureGraph <- bloodPressure %>% 
-  filter(datetime >= maxDate - months(3))
+  filter(datetime >= maxHealthDate - months(3))
+
 ggplot(bloodPressureGraph, aes(x = datetime)) +
   geom_segment(aes(xend = datetime, y = diastolic, yend = systolic), color="grey") +
   geom_point(aes(y = systolic), color = colorSystolic, size = 3, alpha = 0.5) +
@@ -157,5 +161,27 @@ ggplot(bloodPressureGraph, aes(x = datetime)) +
   theme(panel.border = element_blank(),
         axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
-ggsave(sprintf("figs/bloodPressure_%s.png", maxDate), width = 12, height = 8, dpi = 96)
-  
+ggsave(sprintf("figs/bloodPressure_%s.png", maxHealthDate), width = 12, height = 8, dpi = 96)
+
+
+maxWorkoutDate <- max(workoutData$endDate) %>% date()
+
+workoutData <- getWorkoutData(xmlData) %>%
+  mutate(startDate = with_tz(startDate, tzone = "US/Eastern"),
+         endDate = with_tz(endDate, tzone = "US/Eastern"))
+
+monthlyWorkoutSummary <- workoutData %>%
+  mutate(month = floor_date(endDate, unit = "month")) %>%
+  group_by(month, activityType) %>%
+  summarize(distance = sum(totalDistance)) %>%
+  ungroup()
+
+ggplot(monthlyWorkoutSummary, aes(x = month, y = distance, fill = activityType)) +
+  geom_col() +
+  scale_x_datetime(breaks = pretty_breaks(n = 10), date_labels = "%b %e, '%y ") +
+  scale_y_continuous(breaks = pretty_breaks(n = 10)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(title = "Monthly workout distance",
+       y = "miles")
+
+ggsave(sprintf("figs/monthlyWorkout_%s.png", maxWorkoutDate), width = 12, height = 8, dpi = 96)
