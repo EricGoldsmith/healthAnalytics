@@ -9,6 +9,7 @@
 *.xml
 *.json
 *.zip
+*.gpx
 **/figs/
 **/output/
 **/rsconnect/**
