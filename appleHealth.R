@@ -1,11 +1,6 @@
 library(tidyverse)
 library(xml2)
-# library(purrr)
-# library(dplyr)
-# library(lubridate)
-# library(ggplot2)
 library(scales)
-# library(stringr)
 
 
 cleanSourceName <- function(sourceName) {
@@ -198,7 +193,8 @@ message("Done.")
 maxWorkoutDate <- max(workoutData$endDate) %>% date()
 
 monthlyWorkoutSummary <- workoutData %>%
-  mutate(month = floor_date(endDate, unit = "month")) %>%
+  mutate(month = floor_date(endDate, unit = "month"),
+         month = as_date(month)) %>%
   group_by(month, activityType) %>%
   summarize(distance = sum(distance), .groups = "drop") %>%
   filter(distance > 0)
@@ -206,10 +202,23 @@ monthlyWorkoutSummary <- workoutData %>%
 ggplot(monthlyWorkoutSummary, aes(x = month, y = distance, fill = activityType)) +
   geom_col() +
   geom_text(aes(label = round(distance)), position = position_stack(vjust = .5), size = 3) +
-  scale_x_datetime(breaks = pretty_breaks(n = 10), date_labels = "%b %e, '%y ") +
+  scale_x_date(breaks = pretty_breaks(n = n_distinct(monthlyWorkoutSummary$month) / 2)) +
   scale_y_continuous(breaks = pretty_breaks(n = 10), expand = expansion(mult = c(0, .01))) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(title = "Monthly workout distance",
        y = "miles")
 
 ggsave(sprintf("figs/monthlyWorkout_%s.png", maxWorkoutDate), width = 12, height = 8, dpi = 96)
+
+
+ggplot(monthlyWorkoutSummary, 
+       aes(x = month, y = distance, color = activityType, fill  = activityType)) +
+  geom_line() +
+  geom_smooth() +
+  scale_x_date(breaks = pretty_breaks(n = n_distinct(monthlyWorkoutSummary$month) / 2)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 10), expand = expansion(mult = c(0, .01))) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(title = "Monthly workout distance",
+       y = "miles")
+
+ggsave(sprintf("figs/monthlyWorkout2_%s.png", maxWorkoutDate), width = 12, height = 8, dpi = 96)
