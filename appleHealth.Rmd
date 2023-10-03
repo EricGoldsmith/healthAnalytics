@@ -74,8 +74,8 @@ getWorkoutData <- function(xmlData) {
 
 ```{r data_retrieval, include=FALSE}
 
-output_dir <- "output"
-dir.create(output_dir, showWarnings = FALSE)
+outputDir <- "output"
+dir.create(outputDir, showWarnings = FALSE)
 
 filename <- "data/apple_health_export/export.xml"
 
@@ -170,7 +170,7 @@ bloodPressure <- healthData %>%
   tidyr::spread(key = type, value = value) %>%
   select(datetime, systolic = BloodPressureSystolic, diastolic = BloodPressureDiastolic, pulse = HeartRate)
 
-write.csv(bloodPressure, sprintf("output/bloodPressure_%s.csv", maxHealthDate), row.names = FALSE)
+write.csv(bloodPressure, glue("{outputDir}/bloodPressure_{maxHealthDate}.csv"), row.names = FALSE)
 
 colorSystolic <- rgb(0.7, 0.2, 0.1)
 colorDiastolic <- rgb(0.2, 0.7, 0.1)
