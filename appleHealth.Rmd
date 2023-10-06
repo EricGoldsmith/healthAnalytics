@@ -91,6 +91,7 @@ healthData <- getHealthData(xmlData) %>%
          endDate = with_tz(endDate, tzone = "US/Eastern"))
 message(glue("done, taking {format(difftime(Sys.time(), start_time))}"))
 
+minHealthDate <- min(healthData$endDate) %>% date()
 maxHealthDate <- max(healthData$endDate) %>% date()
 
 message("Parsing workout data ... ", appendLF = FALSE)
@@ -102,9 +103,12 @@ message(glue("done, taking {format(difftime(Sys.time(), start_time))}"))
 
 maxWorkoutDate <- max(workoutData$endDate) %>% date()
 
+lastNewHikingBoots <- ymd("2022-04-14")
+
 ```
 
 Report created: `r now() %>% with_tz(tzone = "US/Eastern") %>% format("%F %I:%M:%S %p %Z")`.
+Includes data from `r minHealthDate` through `r maxHealthDate`.
 
 ## Steps and Distance
 ```{r steps_distance, echo=FALSE}
@@ -211,8 +215,15 @@ if (nrow(bloodPressureGraph) >= 2) {
 ## Workouts
 ```{r workouts, echo=FALSE}
 
-monthlyWorkoutSummary <- workoutData %>%
-  mutate(month = floor_date(endDate, unit = "month"),
+dailyWorkoutSummary <- workoutData %>%
+  mutate(day = floor_date(endDate, unit = "day"),
+         day = as_date(day)) %>%
+  group_by(day, activityType) %>%
+  summarize(distance = sum(distance), .groups = "drop") %>%
+  filter(distance > 0)
+
+monthlyWorkoutSummary <- dailyWorkoutSummary %>%
+  mutate(month = floor_date(day, unit = "month"),
          month = as_date(month)) %>%
   group_by(month, activityType) %>%
   summarize(distance = sum(distance), .groups = "drop") %>%
@@ -240,3 +251,13 @@ ggplot(monthlyWorkoutSummary,
 
 ```
 
+### Hiking
+Cumulative hiking distance since `r lastNewHikingBoots`: 
+`r dailyWorkoutSummary %>%
+     filter(day >= lastNewHikingBoots,
+            activityType == 'Hiking') %>%
+     pull(distance) %>%
+     sum() %>%
+     round()
+` miles.
+     
